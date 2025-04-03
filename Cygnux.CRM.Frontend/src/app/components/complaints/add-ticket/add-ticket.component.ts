@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { IdentityService } from '../../../shared/services/identity.service';
 import { CommonService } from '../../../shared/services/common.service';
@@ -6,12 +6,11 @@ import { ExternalService } from '../../../shared/services/external.service';
 import { ToastrService } from 'ngx-toastr';
 import { GeneralMasterResponse } from '../../../shared/models/external.model';
 import { ComplaintService } from '../../../shared/services/complaint.service';
-import { AssignToList, ComplaintGetUser, ComplaintResponse } from '../../../shared/models/complaint.model';
-import { LocationResponse, UserResponse } from '../../../shared/models/meeting.model';
-import { EmailRegex, MultipleEmailRegex } from '../../../shared/constants/common';
+import { AssignToList, ComplaintGetUser, ComplaintResponse, TicketAddressToResponse } from '../../../shared/models/complaint.model';
+import { UserResponse } from '../../../shared/models/meeting.model';
+import { MultipleEmailRegex } from '../../../shared/constants/common';
 import { debounceTime, distinctUntilChanged, filter, Subject } from 'rxjs';
 import { DatePipe } from '@angular/common';
-import { NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
   selector: 'app-add-ticket',
@@ -33,7 +32,7 @@ export class AddTicketComponent {
   public escEmail:string[]=[];
   public emailInput: string = '';
   public emailError: boolean = false;
-  public locations: LocationResponse[] = [];
+  public locations: TicketAddressToResponse[]=[];
   public userList!:ComplaintGetUser;
   public selectedFile: File | null = null;
   public assignToList:AssignToList[]=[]
@@ -50,6 +49,8 @@ export class AddTicketComponent {
       this.onDocketNo(ComplaintResponse.documentNo);
     }
     let customerEmail = ComplaintResponse.customerEmail ? ComplaintResponse.customerEmail.split(';').map((email: string) => email.trim()) : [];
+    if(this.complaint !== 'Escalation'){this.getAssignTo(ComplaintResponse?.ticketAddressToId)}else{this.getAssignTo('')}
+    this.getTicketSubTypes(ComplaintResponse.type);
       this.ticketForm.patchValue({
         userID:ComplaintResponse.userID,
         docketNo:ComplaintResponse.documentNo,
@@ -59,14 +60,14 @@ export class AddTicketComponent {
         ticketDate:ComplaintResponse.compalaintDate,
         description:ComplaintResponse.description,
         type:ComplaintResponse.type.toString(),
-        customerEmail:[customerEmail],
+        // customerEmail:[customerEmail],
         subType:ComplaintResponse.subType.toString(),
-        complaintDate:this.minDate,
+        complaintDate:ComplaintResponse.compalaintDate?ComplaintResponse.compalaintDate:this.minDate,
         updateDate: new Date(),
-        updateRemarks:ComplaintResponse.updateRemark === '-' ? '':ComplaintResponse.updateRemark,
-        assignedToId:ComplaintResponse?.assignToId ? ComplaintResponse.assignToId.split(',') : [],
+        // updateRemarks:ComplaintResponse.updateRemark === '-' ? '':ComplaintResponse.updateRemark,
+        assignedToId:ComplaintResponse?.assignToId ,
         remarks:ComplaintResponse.remarks,
-        ticketAddressTo:ComplaintResponse.ticketAddressTo,
+        ticketAddressTo:ComplaintResponse.ticketAddressToId,
         customerID: ComplaintResponse.customerID
       })
       this.emails = [...customerEmail];
@@ -106,13 +107,13 @@ export class AddTicketComponent {
     this.getUsers();
     this.createEscalationForm();
     this.getLocations();
-    this.getAssignTo();
+    // this.getAssignTo();
   }
 
   onClose(){
+    this.emails=[];
     this.ticketForm.reset();
     this.buildForm();
-    this.emails=[];
     this.ticketForm.patchValue({
       managerName:this.userList.complaintManagerName,
       managerId:this.userList.complaintManagerID,
@@ -124,6 +125,7 @@ export class AddTicketComponent {
     this.escalationForm.reset();
     this.createEscalationForm();
     this.escEmail = [];
+    this.emails=[];
   }
   buildForm(): void {
     this.minDate = new Date();
@@ -139,25 +141,25 @@ export class AddTicketComponent {
       destination: new FormControl(''),
       managerId: new FormControl(''),
       EDD: new FormControl(''),
-      ticketAddressTo: new FormControl(parsedUser.reportingLoc),
+      ticketAddressTo: new FormControl(null,Validators.required),
       managerName: new FormControl(''),
       billingParty: new FormControl(''),
       currentStatus: new FormControl(''),
-      source: new FormControl('', [Validators.required]),
-      priority: new FormControl('', [Validators.required]),
+      source: new FormControl(null, [Validators.required]),
+      priority: new FormControl(null, [Validators.required]),
       complaintDate: new FormControl(this.minDate, [Validators.required]),
       description: new FormControl('', [Validators.required]),
-      type: new FormControl('', [Validators.required]),
+      type: new FormControl(null, [Validators.required]),
       customerEmail: new FormControl('', []),
-      subType: new FormControl('', [Validators.required]),
+      subType: new FormControl(null, [Validators.required]),
       browse: new FormControl(''),
       updateDate: new FormControl(new Date()),
       updateRemarks: new FormControl(''),
-      assignedToId: new FormControl(''),
+      assignedToId: new FormControl([],[Validators.required]),
       complaintId: new FormControl(''),
       remarks: new FormControl(''),
       closeBy: new FormControl(assignedTo),
-      closeRemark: new FormControl('', [Validators.required]),
+      closeRemark: new FormControl(''),
       customerID: new FormControl(''),
       closureDate:new FormControl(new Date()),
       currentLocation:new FormControl('')
@@ -172,12 +174,12 @@ export class AddTicketComponent {
       docketNo: new FormControl(data?.documentNo),
       type: new FormControl(data?.type.toString()),
       description: new FormControl(data?.description),
-      assigned: new FormControl(data?.assignToId ? data.assignToId.split(',') : []),
+      assigned: new FormControl(data?.assignToId),
       status: new FormControl(data?.compaintStatus),
       priority: new FormControl(data?.priority.toString()),
       escalatedTo: new FormControl(data?.escalationTo ? data.escalationTo.split(',') : [], [Validators.required]),
-      escalatedEmail: new FormControl(existingEmails.join(';')),
-      escalatedDate: new FormControl(this.convertToFormattedDate(data?.escalationDate), [Validators.required]),
+      escalatedEmail: new FormControl(),
+      escalatedDate: new FormControl(new Date(), [Validators.required]),
       escalatedRemarks: new FormControl('', [Validators.required]),
       documents: new FormControl(''),
       userID: new FormControl(assignedTo),
@@ -261,6 +263,7 @@ export class AddTicketComponent {
     if (event && event.length) {
       const emailIds = event.map((user: any) => user.emailId);
       this.escEmail = [];
+      // this.escEmail.push(this.complaintResponse?.escEmailId)
       emailIds.forEach((email: any) => {
         if (MultipleEmailRegex.test(email) && !this.escEmail.includes(email)) {
           this.escEmail.push(email);
@@ -314,10 +317,13 @@ export class AddTicketComponent {
 
   getLocations() {
     this.commonService.updateLoader(true);
-    this.externalService.getLocationMaster().subscribe({
+    this.complaintService.getTicketAddressTo().subscribe({
       next: (response) => {
         if (response) {
-          this.locations = response.data;
+          this.locations = response.data.map((user: any) => ({
+            locCode: user.locCode,
+            locName: `${user.locCode}: ${user.locName}`,
+          }));
         }
         this.commonService.updateLoader(false);
       },
@@ -328,9 +334,12 @@ export class AddTicketComponent {
     });
   }
 
-  getAssignTo() {
+  getAssignTo(locCode:string) {
+    this.ticketForm.patchValue({
+      assignedToId:null
+    })
     this.commonService.updateLoader(true);
-    this.complaintService.getAssignTo().subscribe({
+    this.complaintService.getAssignTo(locCode).subscribe({
       next: (response) => {
         if (response) {
           // this.assignToList = response.data;
@@ -372,27 +381,29 @@ export class AddTicketComponent {
   }
  
   onSubmitTicket() {
+    if(this.ticketForm.valid){
     if (this.complaint === 'Update') {
       const {customerID, closeDate, closeRemark,closureDate,docketNo, complaintDate,currentLocation,customerEmail,document,documentNo,priority,assignedToId,source,subType,type,closeBy, billingParty, browse, currentStatus, destination, docDate, EDD, managerId, managerName, origin, userName, ...update } = this.ticketForm.value;
       update.documentNo=this.ticketForm.value.docketNo,
-      update.assignedToId = this.ticketForm.value.assignedToId.join(','),
+      update.assignedToId = this.ticketForm.value.assignedToId,
       update.CustomerEmail = this.emails.join(';'),
       update.updateDate =  this.datePipe.transform(this.ticketForm.value.updateDate, 'dd/MM/yyyy') || '';  
       update.document = 'docket',
       this.updateTicket(update)
     } else if (this.complaint === 'Add') {
-      const {customerID, closeDate, closeRemark,closureDate,userID,subType,type,docketNo,source,priority,description,customerEmail, closeBy,browse,assignedToId, remarks, complaintId, updateRemarks, updateDate, billingParty, destination, docDate, EDD, managerId, managerName, origin, userName, ...data } = this.ticketForm.value;
-      data.DocumentNo = this.ticketForm.value.docketNo,
-      data.Document = this.ticketForm.value.browse,
-      data.AssignedTo = this.ticketForm.value.assignedToId.join(','),
-      data.CustomerEmail = this.emails.join(';'),
-      data.Description = this.ticketForm.value.description,
-      data.Priority = this.ticketForm.value.priority,
-      data.Source = this.ticketForm.value.source,
-      data.SubType = this.ticketForm.value.subType,
-      data.Type = this.ticketForm.value.type,
-      data.UserID = this.ticketForm.value.userID,
-      this.addTicket(data);
+        const {customerID, closeDate, closeRemark,closureDate,userID,subType,type,docketNo,source,priority,description,customerEmail, closeBy,browse,assignedToId, remarks, complaintId, updateRemarks, updateDate, billingParty, destination, docDate, EDD, managerId, managerName, origin, userName, ...data } = this.ticketForm.value;
+        data.DocumentNo = this.ticketForm.value.docketNo,
+        data.Document = this.ticketForm.value.browse,
+        data.AssignedTo = this.ticketForm.value.assignedToId,
+        data.CustomerEmail = this.emails.join(';'),
+        data.Description = this.ticketForm.value.description,
+        data.Priority = this.ticketForm.value.priority,
+        data.Source = this.ticketForm.value.source,
+        data.SubType = this.ticketForm.value.subType,
+        data.Type = this.ticketForm.value.type,
+        data.UserID = this.ticketForm.value.userID,
+        // data.complaintDate =  this.datePipe.transform(this.ticketForm.value.complaintDate, 'dd/MM/yyyy') || '';  
+        this.addTicket(data);
     } else if (this.complaint === 'Close') {
       const close = {
         ComplaintID: this.ticketForm.value.complaintId,
@@ -402,6 +413,9 @@ export class AddTicketComponent {
         // closureDate:this.ticketForm.value.closureDate
       }
       this.closeTicket(close)
+    }
+    }else{
+      this.ticketForm.markAllAsTouched()
     }
   }
   onFileSelected(event: Event) {
@@ -417,7 +431,7 @@ export class AddTicketComponent {
         if (response.success) {
           this.toasterService.success(response.data.message);
           this.dataEmitter.emit();
-          this.ticketForm.reset();
+          this.onClose();
         } else {
           this.toasterService.error(response.error.message);
         }
@@ -437,7 +451,7 @@ export class AddTicketComponent {
         if (response.success) {
           this.toasterService.success(response.data.message);
           this.dataEmitter.emit();
-          this.ticketForm.reset();
+          this.onClose();
         } else {
           this.toasterService.error(response.error.message);
         }
@@ -459,7 +473,7 @@ export class AddTicketComponent {
           if (response.success) {
             this.toasterService.success(response.data.message);
             this.dataEmitter.emit();
-            this.ticketForm.reset();
+            this.onClose();
           } else {
             this.toasterService.error(response.error.message);
           }
@@ -476,13 +490,14 @@ export class AddTicketComponent {
     const { priority, status, assigned, description, type, docketNo, ...data } = this.escalationForm.value;
     data.escalatedEmail =  this.escEmail.join(';')
     data.escalatedTo = this.escalationForm.value.escalatedTo.map((user: any) => user).join(',');
+    data.escalatedDate = this.datePipe.transform(this.escalationForm.value.escalatedDate, 'dd/MM/yyyy') || '';  
     this.commonService.updateLoader(true);
     this.complaintService.AddEscTktComplaint(data).subscribe({
       next: (response) => {
         if (response.success) {
           this.toasterService.success(response.data.message);
           this.dataEmitter.emit();
-          this.escalationForm.reset();
+          this.onEscalationClose()
         } else {
           this.toasterService.error(response.error.message);
         }

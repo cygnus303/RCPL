@@ -47,11 +47,13 @@ import { timeRangeValidator } from '../../../shared/validators/time-range.valida
 export class AddMeetingComponent implements OnInit, OnChanges,OnDestroy {
   public meetingForm!: FormGroup;
   public meetingId: string = '';
+  public attendeeId :string ='';
   public meetingTypes: GeneralMasterResponse[] = [];
   public users: UserResponse[] = [];
   public customers: LeadCustomerResponse[] = [];
   public leadContacts: LeadContactResponse[] = [];
   public locations: LocationResponse[] = [];
+  meetingRole:boolean = false;
   public meetingMom:MeetingMoMResponse[]=[];
   public isChecked:boolean=false;
   meetingSubscription:Subscription
@@ -87,13 +89,20 @@ export class AddMeetingComponent implements OnInit, OnChanges,OnDestroy {
  
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['meetingResponse'] && this.meetingResponse) {
-      if(this.meetingResponse.attendees){this.meetingResponse.attendeeIDs = this.meetingResponse?.attendees.split(',')}
+      if(this.meetingResponse.attendees){
+        this.meetingResponse.attendeeIDs = this.meetingResponse?.attendees.split(',');
+      }
       this.meetingResponse.meetingMOM=this.meetingResponse.meetingMOM ? this.meetingResponse.meetingMOM.toString().split(','):[];
       this.center.lat = this.meetingResponse.latitude;
       this.center.lng = this.meetingResponse.longitude;
       this.meetingId = this.meetingResponse.meetingId;
+      this.attendeeId = this.meetingResponse.attendeeCode;
       this.meetingForm.patchValue(this.meetingResponse);
-      
+      this.meetingForm.patchValue({
+        meetingTypeId:this.meetingResponse.meetingTypeId.toString()
+      })
+      this.meetingRole = this.meetingResponse.meetingRole === 'A' ? true:false;
+      // this.checkOutValue = this.meetingResponse.checkOut;
     } else {
       this.meetingForm.reset();
       this.meetingId = '';
@@ -142,11 +151,32 @@ export class AddMeetingComponent implements OnInit, OnChanges,OnDestroy {
       longitude: new FormControl(null),
       checkInDateTime:new FormControl(null),
       checkOutDateTime:new FormControl(null),
-      remarks:new FormControl(null)
+      remarks:new FormControl(null),
+      CreateBy:new FormControl(this.identityService.getLoggedUserId()),
+      ModifiedBy:new FormControl(null)
     },
     // { validators: timeRangeValidator  }
   );
-  // this.meetingForm.setValidators(this.checkDuplicateMeetingTimes.bind(this));
+  this.meetingForm.setValidators(this.checkDuplicateMeetingTimes.bind(this));
+  }
+
+  checkDuplicateMeetingTimes(_control?: AbstractControl): ValidationErrors | null {
+    if((this.checkOutValue =='-' && !this.meetingId)|| (this.checkOutValue =='-' && this.meetingId) ){
+    const meetingDate = this.meetingForm.get('meetingDate')?.value;
+    const startTime = this.meetingForm.get('startTime')?.value;
+    const endTime = this.meetingForm.get('endTime')?.value;
+    const today = new Date();
+    const dateParts = meetingDate?.split('/');
+    const formattedDate = `${dateParts?.[2]}-${dateParts?.[1]}-${dateParts?.[0]}`;
+    const startDateTime = new Date(`${formattedDate}T${startTime}`);
+    const endDateTime = new Date(`${formattedDate}T${endTime}`);
+    if(startDateTime <= today){
+      return { startTimeAfterCurrentTime: true }; // Custom error key
+    }else if(endDateTime <= startDateTime){
+      return { timeRangeValidator: true }; // Custom error key
+    }
+    }
+    return null;
   }
 
   isDateDisabled = (date: { year: number; month: number; day: number }): boolean => {
@@ -257,9 +287,11 @@ export class AddMeetingComponent implements OnInit, OnChanges,OnDestroy {
         attendeeIDs: form.value.attendeeIDs?.join(','),
         meetingMOM:form.value.meetingMOM?.join(','),
         meetingDate:this.formatDate(form.value.meetingDate),
-        customerCode:form.value.customerCode ? form.value.customerCode : customerCode
+        customerCode:form.value.customerCode ? form.value.customerCode : customerCode,
         // leadId:leadId ?leadId :'',
         // isAllDayEvent:false
+        CreateBy:this.identityService.getLoggedUserId(),
+        ModifiedBy:this.isMeetingList === 'Update' ? this.identityService.getLoggedUserId():''
       };
       !this.meetingId
         ? this.addMeeting(dataToSubmit)
@@ -292,7 +324,7 @@ export class AddMeetingComponent implements OnInit, OnChanges,OnDestroy {
 
   updateMeeting(dataToSubmit: any): void {
     this.commonService.updateLoader(true);
-    this.meetingService.updateMeeting(this.meetingId, dataToSubmit).subscribe({
+    this.meetingService.updateMeeting(this.attendeeId, dataToSubmit).subscribe({
       next: (response) => {
         if (response.success) {
           this.dataEmitter.emit();
@@ -336,6 +368,7 @@ export class AddMeetingComponent implements OnInit, OnChanges,OnDestroy {
     this.externalService.getUserMaster().subscribe({
       next: (response) => {
         if (response) {
+          // const data = response.data.filter((d)=>d.userId.toString() !== this.identityService.getLoggedUserId());
           this.users = response.data.map((user: any) => ({
             userId: user.userId,
             name: `${user.userId}: ${user.name}`,

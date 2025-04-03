@@ -76,9 +76,9 @@ export class ExpenseListComponent implements OnInit {
     this.commonService.updateLoader(true);
     const filters: any = {
       UserId:this.identifyService.getLoggedUserId(),
-      export:false
+      export:true
     }
-    this.expenseService.exportExpense(filters).subscribe({
+    this.expenseService.exportexport(filters).subscribe({
       next: (response) => {
         if (response) {
           this.exportService.exportToExcel(response.data);
@@ -138,7 +138,7 @@ export class ExpenseListComponent implements OnInit {
   getExpense(data: any) {
     this.commonService.updateLoader(true);
     const filter={
-      id:data.meetingId,
+      id:data.attendeeCode,
       userId:this.identifyService.getLoggedUserId()
     }
     this.expenseService.getExpenseDetails(filter.id,filter.userId).subscribe({

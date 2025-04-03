@@ -20,6 +20,10 @@ export interface ExpenseResponse {
   isAuditApproved:boolean;
   isManager_AuditApproved:boolean;
   reqId:string;
+  meetingDate:string;
+  meetingId:string;
+  attendeeName:string;
+  attendeeIDs:string;
 }
 
 export interface ExpenseDetailResponse extends ExpenseResponse {
@@ -38,7 +42,7 @@ export interface ExpenseDetailResponse extends ExpenseResponse {
   modifiedDate: string;
   expenseCreated:boolean;
   transportModeId:string;
-  requestID:number;
+  requestID:string;
   auditRemarks:string;
   expenseRate:number;
   auditedBy:string;
@@ -58,6 +62,7 @@ export interface ExpenseDetailResponse extends ExpenseResponse {
   approvedByAuditDate:string;
   expensEditDate:string;
   expenseEditedBy:string;
+  attendeeCode:any;
 }
 
 export interface AddExpenseRequest {

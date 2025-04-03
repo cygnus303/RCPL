@@ -47,6 +47,7 @@
                   <thead class="table-light">
                     <tr>
                       <th class="text-center">Expense No.</th>
+                      <th class="text-center">Meeting ID</th>
                       <th class="text-center">Expense Date</th>
                       <th class="text-center">Customer Name</th>
                       <th class="text-center">Meeting date</th>
@@ -62,6 +63,10 @@
                     <tr>
                       <th>
                         <input type="text" [(ngModel)]="filters['expenseId']" (input)="getExpenses()"
+                          class="form-control" />
+                      </th>
+                      <th>
+                        <input type="text" [(ngModel)]="filters['meetingId']" (input)="getExpenses()"
                           class="form-control" />
                       </th>
                       <th>
@@ -126,10 +131,14 @@
                   </thead>
                   <tbody class="list form-check-all">
                     <tr *ngFor="let expense of expenses; let i = index">
-                      <td class="text-center truncate-text">{{ expense.expenseId ? expense.expenseId:'--' }}</td>
+                      <td class="text-center truncate-text" >{{ expense.expenseId ? expense.expenseId:'--' }}</td>
+                      <td class="text-center truncate-text"><div 
+                        [popover]="hourPopover" [popoverContext]="{index: expense}" placement="right" triggers="hover" [popoverTitle]="'Attendees Details'"  [outsideClick]="true" container="body">
+                        {{ expense.meetingId ? expense.meetingId:'--' }}</div></td>
+                      <!-- <td class="text-center truncate-text">{{ expense.meetingId ? expense.meetingId:'--' }}</td> -->
                       <td class="text-center truncate-text">{{ expense.expenseDate ? expense.expenseDate:'--' }}</td>
                       <td class="text-center truncate-text">{{expense.companyName?expense.companyName:'--'}}</td>
-                      <td class="text-center truncate-text">{{ expense.expenseDate ? expense.expenseDate:'--' }}</td>
+                      <td class="text-center truncate-text">{{ expense.meetingDate ? expense.meetingDate:'--' }}</td>
                       <td class="text-center truncate-text">{{expense.checkIn? expense.checkIn:'--'}}</td>
                       <td class="text-center truncate-text">{{expense.checkOut?expense.checkOut:'--'}}</td>
                       <td class="text-center truncate-text">{{expense.distanceTravelled?expense.distanceTravelled:'--'}}</td>
@@ -254,3 +263,9 @@
     </div>
   </div>
 </div>
+
+<ng-template #hourPopover let-index="index">
+  <div class="abc">
+    {{index?.attendeeIDs }} : {{index?.attendeeName}}
+  </div>
+</ng-template>

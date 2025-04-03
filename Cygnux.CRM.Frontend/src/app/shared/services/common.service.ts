@@ -1,9 +1,13 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { Inject, Injectable } from '@angular/core';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { ApiHandlerService } from './api-handler.service';
+import { IApiBaseResponse } from '../interfaces/api-base-action-response';
+import { IdentityService } from './identity.service';
 @Injectable({
   providedIn: 'root',
 })
 export class CommonService {
+  isSFMMaster = new Subject<any>();
   loading = new BehaviorSubject(false);
   isLoading = this.loading.asObservable();
   public userChart = new Subject<boolean>()
@@ -11,6 +15,9 @@ export class CommonService {
   updateLoader(isLoading: boolean) {
     this.loading.next(isLoading);
   }
+    constructor(
+      @Inject(ApiHandlerService) private apiHandlerService: ApiHandlerService,public identifyService :IdentityService
+    ) {}
 
   isDateDisabled = (date: { year: number; month: number; day: number }) => {
     const today = new Date();
@@ -56,6 +63,18 @@ export class CommonService {
       label: 'Last Month',
     },
   ];
+
+  getMenu(): Observable<IApiBaseResponse<any>> {
+    return this.apiHandlerService.Get(`External/Menu?userid=${this.identifyService.getLoggedUserId()}`);
+  }
+
+  getMenuList(){
+    this.getMenu().subscribe((res)=>{
+      localStorage.setItem('ISSFMMASTER', JSON.stringify(res.data[0]));
+      this.isSFMMaster.next(res.data[0])
+    })
+  }
+
 }
 
 interface IRange {

@@ -12,6 +12,7 @@ import {
   ComplaintResponse,
   DocDataDetail,
   EscalatedHistory,
+  TicketAddressToResponse,
   UpdateHistory,
 } from '../models/complaint.model';
 import { ApiHandlerService } from './api-handler.service';
@@ -43,6 +44,10 @@ export class ComplaintService {
 
   getComplaintDetails( id: string,UserId:string): Observable<IApiBaseResponse<ComplaintDetailResponse>> {
     return this.apiHandlerService.Get(`complaint/GetDetail/${id}?UserId=${UserId}`);
+  }
+
+  getTicketAddressTo(): Observable<IApiBaseResponse<TicketAddressToResponse[]>> {
+    return this.apiHandlerService.Get(`Complaint/TicketAddressTo`);
   }
 
   addComplaint(
@@ -101,8 +106,8 @@ export class ComplaintService {
         return this.apiHandlerService.Get('Dashboard/ComplaintByStatus', filters);
       }
 
-      getAssignTo():Observable<IApiBaseResponse<any>>{
-        return this.apiHandlerService.Get('Complaint/AssignTo');
+      getAssignTo(locCode:string):Observable<IApiBaseResponse<any>>{
+        return this.apiHandlerService.Get(`Complaint/AssignTo?BranchCode=${locCode}`);
       }
 
       getupdateHistory(Id:string):Observable<IApiBaseResponse<UpdateHistory>>{

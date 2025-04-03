@@ -59,7 +59,7 @@
                       <th class="text-center">Check In <br>Time in Hrs</th>
                       <th class="text-center">Check Out <br> Time in Hrs</th>
                       <th class="text-center">Meeting TAT<br> in Minutes</th>
-                      <th class="text-center">Check In-Check Out</th>
+                      <!-- <th class="text-center">Check In-Check Out</th> -->
                       <th class="text-center">Meeting Status</th>
                       <th class="text-center">Action</th>
                     </tr>
@@ -103,7 +103,7 @@
                         (input)="getMeetings()"
                         class="form-control"
                       /> </th>
-                      <th></th>
+                      <!-- <th></th> -->
                       <th>
                         <input type="text" [(ngModel)]="filters['Status']" (input)="getMeetings()"
                           class="form-control" />
@@ -114,7 +114,7 @@
                   <tbody class="list form-check-all">
                     <tr *ngFor="let meeting of meetings; let i = index">
                       <td class="text-center">
-                        <a *ngIf="!meeting.meetingMOM" href="#" (click)="expenseModal($event, meeting.meetingId)">
+                        <a *ngIf="!meeting.meetingMOM">
                           {{ meeting.customerName ? meeting.customerName:'--'}}</a>
                         <p *ngIf="
                             meeting.meetingMOM  ||
@@ -129,25 +129,25 @@
                       <td class="text-center">{{ meeting.checkIn? meeting.checkIn:'--'}}</td>
                       <td class="text-center">{{ meeting.checkOut ? meeting.checkOut:'--'}}</td>
                       <td class="text-center">{{meeting.meetingTimeInMins ? meeting.meetingTimeInMins:'--'}} </td>
-                      <td class="text-center">
+                      <!-- <td class="text-center">
                       <div class="d-flex">
                         <span [title]="meeting.checkInReason"><button class="btn btn-danger me-1 fontsize" (click)="onCheckIn(meeting,i)"  [disabled]="!meeting.isCheckInEnabled || meeting.checkIn !== '-'">Check In</button></span>
                         <span [title]="meeting.checkOutReason"><button class="btn btn-secondary fontsize" (click)="onCheckOut(meeting,i)"  [disabled]="!meeting.isCheckOutEnabled">Check Out</button></span>
                       </div>
-                      </td> 
+                      </td>  -->
                       <!-- <td>{{ meeting.taTinHrs }}</td> -->
                       <td class="text-center">{{ meeting.meetingStatus ? meeting.meetingStatus:'--'}}</td>
                       <td class="text-center">
                         <ul class="list-inline hstack gap-2 mb-0">
                           <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-trigger="hover"
-                            data-bs-placement="top" title="Edit" [class.disabled]="meeting.createdBy !== identityService.getLoggedUserId()?true:false">
+                            data-bs-placement="top" title="Edit">
                             <a class="edit-item-btn"
-                            (click)="(meeting.createdBy !== identityService.getLoggedUserId()) ? $event.preventDefault() : editModal($event, meeting.meetingId, meeting.checkOut)"><i
+                            (click)="editModal($event, meeting.attendeeCode, meeting.checkOut)"><i
                                 class="ri-pencil-fill align-bottom text-muted" ></i></a>
                           </li>
                           <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-trigger="hover"
                             data-bs-placement="top" title="View">
-                            <a href="#" (click)="viewModal($event, meeting.meetingId)"><i
+                            <a href="#" (click)="viewModal($event, meeting.attendeeCode)"><i
                                 class="ri-eye-fill align-bottom text-muted"></i></a>
                           </li>
                           <!-- <li class="list-inline-item edit" data-bs-toggle="tooltip" data-bs-trigger="hover"
@@ -162,12 +162,12 @@
                               <i class="ri-map-pin-user-fill fs-16"></i>
                             </a>
                           </li> -->
-                          <li class="list-inline-item edit" data-bs-toggle="tooltip" data-bs-trigger="hover"
-                            data-bs-placement="top" [attr.title]="'CheckIn: ' + meeting.checkIn + ' & Checkout: ' + meeting.checkOut">
-                            <a  
-                               class="text-muted d-inline-block">
+                          <li class="list-inline-item edit">
+                            <div [popover]="hourPopover" [popoverContext]="{index: meeting}" triggers="hover" placement="left" [popoverTitle]="'CheckIn/Out Time'"  [outsideClick]="true" container="body">
+                              <a class="text-muted d-inline-block">
                               <i class="ri-map-pin-user-fill fs-16"></i>
                             </a>
+                            </div>
                           </li>
                           <!-- <li
                             class="list-inline-item edit"
@@ -185,10 +185,11 @@
                             </a>
                           </li> -->
 
-                          <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-trigger="hover"
-                            data-bs-placement="top" [title]="meeting.geoLocation">
+                          <li class="list-inline-item">
+                            <div [popover]="meeting.geoLocation" placement="left" [popoverTitle]="'Location Details'" triggers="hover" [outsideClick]="true" container="body">
                             <a class="edit-item-btn" href="#" (click)="preventClick($event)"><i
                                 class="ri-map-pin-2-fill align-bottom text-muted"></i></a>
+                          </div>
                           </li>
                         </ul>
                       </td>
@@ -295,3 +296,10 @@
     </div>
   </div>
 </div>
+
+<ng-template #hourPopover let-index="index" class="p-1">
+  <div>
+    <div class="mb-1"><strong>CheckIn: </strong> {{ index.checkIn }}</div>
+    <div><strong>Checkout: </strong> {{ index.checkOut }}</div>
+  </div>
+</ng-template>
